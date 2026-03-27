@@ -69,4 +69,17 @@ def post_config():
 
 
 def run_server(port: int = 5173, debug: bool = False):
+    import logging
+    import sys
+
+    # Flask/Werkzeug startup messages (INFO level) pollute MCP's stdout-based
+    # JSON transport. Suppress them so only ERROR+ goes through.
+    for name in ("werkzeug", "flask.app", "flask"):
+        logger = logging.getLogger(name)
+        logger.setLevel(logging.ERROR)
+        # Replace any stdout handlers with stderr to be safe
+        for handler in logger.handlers:
+            if getattr(handler, "stream", None) is sys.stdout:
+                handler.stream = sys.stderr
+
     app.run(host="127.0.0.1", port=port, debug=debug, use_reloader=False)
