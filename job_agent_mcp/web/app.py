@@ -70,29 +70,16 @@ def post_config():
 
 def run_server(port: int = 5173, debug: bool = False):
     import logging
-    import sys
+    from flask import cli
 
-    import click
+    # "* Serving Flask app" / "* Debug mode: off" are printed by
+    # flask.cli.show_server_banner via click.echo. Replace it with a no-op.
+    cli.show_server_banner = lambda *args, **kwargs: None
 
-    # Flask/Werkzeug startup messages pollute MCP's stdout-based JSON transport.
-    # 1) Silence via logging: set ERROR level and disable propagation so messages
-    #    never reach the root logger (which may have a stdout StreamHandler).
-    null_handler = logging.NullHandler()
-    for name in ("werkzeug", "werkzeug.serving", "flask.app", "flask"):
-        logger = logging.getLogger(name)
-        logger.setLevel(logging.ERROR)
-        logger.propagate = False
-        logger.handlers = [h for h in logger.handlers if getattr(h, "stream", None) is not sys.stdout]
-        if not logger.handlers:
-            logger.addHandler(null_handler)
-
-    # 2) Werkzeug also uses click.echo for some banner lines (e.g. "* Running on …").
-    #    Redirect those to stderr so they never touch stdout.
-    _orig_echo = click.echo
-
-    def _echo_to_stderr(message=None, file=None, nl=True, err=False, color=None):
-        _orig_echo(message, file=file if file is not None else sys.stderr, nl=nl, err=err, color=color)
-
-    click.echo = _echo_to_stderr
+    # "* Running on ..." comes from werkzeug logging (INFO level).
+    # Raise the level and cut propagation so it never reaches any stdout handler.
+    log = logging.getLogger("werkzeug")
+    log.setLevel(logging.ERROR)
+    log.propagate = False
 
     app.run(host="127.0.0.1", port=port, debug=debug, use_reloader=False)
