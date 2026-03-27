@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Agent 설정</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; }
+  .container { max-width: 680px; margin: 40px auto; padding: 0 20px 60px; }
+  h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; color: #111; }
+  .subtitle { font-size: 0.9rem; color: #666; margin-bottom: 32px; }
+  .card { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: #111; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+  label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #555; }
+  input[type=text], input[type=password], input[type=url] {
+    width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px;
+    font-size: 0.9rem; margin-bottom: 14px; transition: border-color .2s;
+  }
+  input:focus { outline: none; border-color: #5b6af8; }
+  .hint { font-size: 0.78rem; color: #888; margin-top: -10px; margin-bottom: 14px; }
+  .hint a { color: #5b6af8; }
+  .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .checkbox-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    border: 1px solid #e5e5e5; border-radius: 8px; cursor: pointer; transition: background .15s; }
+  .checkbox-item:hover { background: #f7f8ff; }
+  .checkbox-item input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: #5b6af8; }
+  .checkbox-item span { font-size: 0.88rem; }
+  .btn { display: block; width: 100%; padding: 13px; background: #5b6af8; color: #fff;
+    border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background .2s; }
+  .btn:hover { background: #4a59e8; }
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #333; color: #fff; padding: 12px 24px; border-radius: 8px; font-size: 0.9rem;
+    opacity: 0; transition: all .3s; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { background: #e74c3c; }
+  .section-label { font-size: 0.85rem; font-weight: 500; color: #555; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>⚙️ Job Agent 설정</h1>
+  <p class="subtitle">Notion CV 연동 및 채용 공고 필터를 설정합니다.</p>
+
+  <!-- Notion -->
+  <div class="card">
+    <h2>🔗 Notion 설정</h2>
+    <label for="notion_token">Integration 토큰</label>
+    <input type="password" id="notion_token" placeholder="ntn_xxxxxxxxxxxxxxxx"
+      value="{{ cfg.notion_token }}">
+    <p class="hint">
+      토큰이 없다면
+      <a href="https://www.notion.so/profile/integrations/internal" target="_blank">여기</a>에서 생성하세요.
+      생성 후 CV 페이지 ··· &gt; Connections &gt; Integration 추가 필요.
+    </p>
+
+    <label for="notion_cv_url">CV 페이지 URL 또는 ID</label>
+    <input type="url" id="notion_cv_url" placeholder="https://www.notion.so/Your-CV-abc123..."
+      value="{{ cfg.notion_cv_page_id }}">
+    <p class="hint">URL 전체를 붙여넣으면 페이지 ID를 자동으로 추출합니다.</p>
+  </div>
+
+  <!-- Job Categories -->
+  <div class="card">
+    <h2>💼 직군/직무 필터</h2>
+    <p class="section-label">관심 있는 직군을 선택하세요 (복수 선택 가능)</p>
+    <div class="checkbox-grid">
+      {% for label in job_category_labels %}
+      <label class="checkbox-item">
+        <input type="checkbox" name="job_cat" value="{{ loop.index0 }}"
+          {% if loop.index0 in cfg.job_category_indices %}checked{% endif %}>
+        <span>{{ label }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Company Sizes -->
+  <div class="card">
+    <h2>🏢 회사 규모 필터</h2>
+    <p class="section-label">관심 있는 회사 규모를 선택하세요 (복수 선택 가능)</p>
+    <div class="checkbox-grid">
+      {% for size in company_sizes %}
+      <label class="checkbox-item">
+        <input type="checkbox" name="company_size" value="{{ size }}"
+          {% if size in cfg.company_sizes %}checked{% endif %}>
+        <span>{{ company_size_labels[size] }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <button class="btn" onclick="saveConfig()">💾 설정 저장</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function showToast(msg, isError) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => el.className = 'toast', 3000);
+}
+
+async function saveConfig() {
+  const token = document.getElementById('notion_token').value.trim();
+  const url = document.getElementById('notion_cv_url').value.trim();
+
+  const jobCats = [...document.querySelectorAll('input[name=job_cat]:checked')]
+    .map(el => parseInt(el.value));
+  const companySizes = [...document.querySelectorAll('input[name=company_size]:checked')]
+    .map(el => el.value);
+
+  try {
+    const resp = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        notion_token: token,
+        notion_cv_page_url: url,
+        job_category_indices: jobCats,
+        company_sizes: companySizes,
+      }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      showToast('✅ ' + data.message);
+    } else {
+      showToast('❌ 저장 실패', true);
+    }
+  } catch (e) {
+    showToast('❌ 오류: ' + e.message, true);
+  }
+}
+</script>
+</body>
+</html>

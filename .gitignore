@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+.ruff_cache/
+
+# User config (contains Notion token)
+~/.job-agent/
+config.json
+
+# macOS
+.DS_Store
