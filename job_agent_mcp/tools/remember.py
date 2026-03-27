@@ -33,7 +33,8 @@ async def _fetch_page(client: httpx.AsyncClient, page: int, cfg) -> List[Dict[st
         timeout=30.0,
     )
     resp.raise_for_status()
-    return resp.json().get("job_postings", [])
+    data = resp.json()
+    return data.get("data") or data.get("job_postings", [])
 
 
 def _format_experience(min_exp, max_exp) -> str:
