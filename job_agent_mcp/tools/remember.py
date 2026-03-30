@@ -64,16 +64,27 @@ def _format_deadline(job: Dict[str, Any]) -> str:
 
 def _job_summary(jobs: List[Dict[str, Any]]) -> str:
     lines = [f"총 {len(jobs)}개 공고\n"]
-    header = f"{'No':<5} {'회사명':<20} {'공고제목':<40} {'경력':<12} {'지역':<14} {'마감일'}"
+    header = f"{'No':<5} {'job_id':<12} {'회사명':<20} {'공고제목':<40} {'경력':<12} {'지역':<14} {'마감일'}"
     lines.append(header)
-    lines.append("-" * 100)
+    lines.append("-" * 115)
+
+    id_index = []
     for i, job in enumerate(jobs, 1):
-        company = (job.get("company_name") or "")[:18]
+        job_id = job.get("id", "")
+        company = (job.get("company_name") or (job.get("organization") or {}).get("name") or "")[:18]
         title = (job.get("title") or "")[:38]
         exp = _format_experience(job.get("min_experience"), job.get("max_experience"))
         loc = _format_location(job)[:12]
         deadline = _format_deadline(job)
-        lines.append(f"{i:<5} {company:<20} {title:<40} {exp:<12} {loc:<14} {deadline}")
+        lines.append(f"{i:<5} {str(job_id):<12} {company:<20} {title:<40} {exp:<12} {loc:<14} {deadline}")
+        id_index.append((i, job_id))
+
+    lines.append("")
+    lines.append("## JOB_ID_INDEX")
+    for num, jid in id_index:
+        lines.append(f"{num}={jid}")
+    lines.append("## END_JOB_ID_INDEX")
+
     return "\n".join(lines)
 
 
