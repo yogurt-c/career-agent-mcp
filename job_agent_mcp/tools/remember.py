@@ -110,7 +110,7 @@ async def get_job_detail(job_id: str) -> str:
         resp.raise_for_status()
         data = resp.json()
 
-    jp = data.get("job_posting", data)
+    jp = data.get("data") or data.get("job_posting", data)
 
     def section(title: str, content) -> str:
         if not content:
@@ -126,12 +126,14 @@ async def get_job_detail(job_id: str) -> str:
             loc_parts.append(v)
     loc = " ".join(loc_parts) or "미정"
 
+    company_name = (jp.get("organization") or {}).get("name") or jp.get("company_name", "")
+
     lines = [
         "=" * 60,
-        f"회사명    : {jp.get('company_name', '')}",
+        f"회사명    : {company_name}",
         f"공고제목  : {jp.get('title', '')}",
         f"경력      : {exp}",
-        f"학력      : {jp.get('education_level') or '무관'}",
+        f"학력      : {jp.get('education_requirement') or jp.get('education_level') or '무관'}",
         f"지역      : {loc}",
         f"마감일    : {_format_deadline(jp)}",
         f"등록일    : {(jp.get('starts_at') or '')[:10]}",
@@ -153,11 +155,11 @@ async def get_job_detail(job_id: str) -> str:
         for d in docs:
             lines.append(f"  • {d}")
 
-    lines.append(section("주요업무", jp.get("main_tasks")))
+    lines.append(section("주요업무", jp.get("job_description") or jp.get("main_tasks")))
     lines.append(section("자격요건", jp.get("qualifications")))
     lines.append(section("우대사항", jp.get("preferred_qualifications")))
-    lines.append(section("채용절차", jp.get("hiring_process")))
-    lines.append(section("기업소개", jp.get("company_intro") or jp.get("company_description")))
+    lines.append(section("채용절차", jp.get("recruiting_process") or jp.get("hiring_process")))
+    lines.append(section("기업소개", jp.get("introduction") or jp.get("company_intro") or jp.get("company_description")))
     lines.append("=" * 60)
 
     return "\n".join(lines)
