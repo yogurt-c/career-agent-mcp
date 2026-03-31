@@ -80,7 +80,12 @@ async def delete_block_tool(block_id: str) -> str:
 
 @mcp.tool()
 async def search_jobs_tool() -> str:
-    """저장된 필터로 리멤버 커리어 채용 공고를 1~5페이지 조회한다."""
+    """저장된 필터로 리멤버 커리어 채용 공고를 1~5페이지 조회한다.
+
+    응답: 텍스트 테이블 (컬럼 순서: No, job_id, 회사명, 공고제목, 경력, 지역, 마감일)
+    - job_id: get_job_detail_tool에 전달할 실제 공고 ID (예: 304027). 반드시 이 값을 사용.
+    - No: 단순 순번이며 공고 ID가 아님. get_job_detail_tool에 사용 불가.
+    """
     return await search_jobs()
 
 
@@ -89,7 +94,7 @@ async def get_job_detail_tool(job_id: str) -> str:
     """특정 채용 공고의 상세 정보를 조회한다.
 
     Args:
-        job_id: 리멤버 커리어 공고 ID
+        job_id: search_jobs_tool 결과 테이블의 job_id 컬럼 값 (숫자 ID, 예: "304027")
     """
     return await get_job_detail(job_id)
 

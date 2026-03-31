@@ -68,7 +68,6 @@ def _job_summary(jobs: List[Dict[str, Any]]) -> str:
     lines.append(header)
     lines.append("-" * 115)
 
-    id_index = []
     for i, job in enumerate(jobs, 1):
         job_id = job.get("id", "")
         company = (job.get("company_name") or (job.get("organization") or {}).get("name") or "")[:18]
@@ -77,13 +76,6 @@ def _job_summary(jobs: List[Dict[str, Any]]) -> str:
         loc = _format_location(job)[:12]
         deadline = _format_deadline(job)
         lines.append(f"{i:<5} {str(job_id):<12} {company:<20} {title:<40} {exp:<12} {loc:<14} {deadline}")
-        id_index.append((i, job_id))
-
-    lines.append("")
-    lines.append("## JOB_ID_INDEX")
-    for num, jid in id_index:
-        lines.append(f"{num}={jid}")
-    lines.append("## END_JOB_ID_INDEX")
 
     return "\n".join(lines)
 
